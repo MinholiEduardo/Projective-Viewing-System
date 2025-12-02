@@ -1,6 +1,6 @@
 # Projective-Viewing-System
 
-Overview
+# Overview
 
 This project consists of implementing a projective visualization system based on conic (perspective) projection.
 The program must be developed in any programming language of your choice and submitted according to the course guidelines.
