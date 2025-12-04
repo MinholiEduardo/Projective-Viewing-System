@@ -3,7 +3,7 @@ import pygame
 import sys
 import doctest
 
-# --- 1. Definições Iniciais do Objeto e Viewport ---
+# --- Definições Iniciais do Objeto e Viewport ---
 
 # Objeto: Octaedro (6 Vértices)
 VERTICES_CARTESIANAS = np.array([
@@ -28,29 +28,28 @@ ARESTAS = [
     (4, 2), (4, 3), (5, 2), (5, 3)
 ]
 
-# Dimensões do Viewport (Dispositivo)
+# Dimensões do Viewport
 VIEWPORT_WIDTH = 640
 VIEWPORT_HEIGHT = 480
 VIEWPORT_MIN = np.array([0, 0])
 VIEWPORT_MAX = np.array([VIEWPORT_WIDTH, VIEWPORT_HEIGHT])
 
-# --- 2. Funções de Entrada e Validação do Usuário ---
+# --- Funções de Entrada e Validação do Usuário ---
 
 def obter_coordenadas(prompt: str) -> np.ndarray:
-    """
+    '''
     Solicita e retorna uma coordenada 3D do usuário.
 
-    Args:
+    Entrada:
         prompt: A mensagem a ser exibida ao usuário.
 
-    Returns:
-        Um array numpy 3D com as coordenadas [x, y, z].
-    """
+    Saída:
+        Um array com as coordenadas 3D [x, y, z].
+    '''
     while True:
         try:
-            coords_str = input(prompt + " (Ex: 10 20 30): ")
-            # Separa por qualquer espaço em branco e converte para float
-            coords = list(map(float, coords_str.split()))
+            coords_str = input(prompt)
+            coords = list(map(float, coords_str.split())) # Separa por qualquer espaço em branco e converte para float
             if len(coords) != 3:
                 raise ValueError("Por favor, insira exatamente 3 valores separados por espaços.")
             return np.array(coords)
@@ -58,17 +57,17 @@ def obter_coordenadas(prompt: str) -> np.ndarray:
             print(f"Entrada inválida. Erro: {e}")
 
 def calcular_normal(P1: np.ndarray, P2: np.ndarray, P3: np.ndarray) -> np.ndarray:
-    """
+    '''
     Calcula e retorna o vetor normal normalizado do plano definido por P1, P2 e P3.
 
     Retorna o vetor zero [0., 0., 0.] se os pontos forem colineares.
 
-    Args:
-        P1, P2, P3: Vetores 3D (np.ndarray) que definem o plano.
+    Entrada:
+        P1, P2, P3: Vetores 3D que definem o plano.
 
-    Returns:
-        O vetor normal normalizado (np.ndarray).
-    """
+    Saída:
+        O vetor normal normalizado.
+    '''
     V12 = P1 - P2
     V32 = P3 - P2
     N = np.cross(V12, V32)
@@ -82,96 +81,101 @@ def calcular_normal(P1: np.ndarray, P2: np.ndarray, P3: np.ndarray) -> np.ndarra
     return N / norm_N
 
 def obter_dados_do_cenario():
-    """
+    '''
     Coleta interativamente C, P1, P2, P3 e R0, validando a geometria para evitar
     projeções indefinidas (divisão por zero).
 
-    Returns:
+    Saída:
         Tupla de (C_PV, P1, P2, P3, R0_PONTO, N_NORMAL)
         C_PV: Ponto de Vista.
         P1, P2, P3: Pontos que definem o Plano de Projeção.
         R0_PONTO: Um ponto sobre o plano (igual a P1).
         N_NORMAL: O vetor normal normalizado do plano.
-    """
+    '''
     print("\n--- Configuração da Projeção ---")
     R0_PONTO = None
     N_NORMAL = None
     
-    # 1. Obter P1, P2, P3 e checar colinearidade
+    # Obtem P1, P2, P3 e checa colinearidade
     while N_NORMAL is None or np.linalg.norm(N_NORMAL) < 1e-9:
         print("\n[Passo 1/2: Definir Plano de Projeção]")
-        P1 = obter_coordenadas("Insira as coordenadas do Ponto P1")
-        P2 = obter_coordenadas("Insira as coordenadas do Ponto P2")
-        P3 = obter_coordenadas("Insira as coordenadas do Ponto P3")
+        print("\n[Coordenadas de Exemplo Pronto] \n[00 00 -03] \n[00 02 -03] \n[02 00 -03]")
+        print("\nPara inserir as coordenas, basta digitar os 3 números, com espaçamento e sem '[' ou ']'")
+        print("Exemplo -> 00 00 00\n")
+        P1 = obter_coordenadas("Insira as coordenadas do Ponto P1: ")
+        P2 = obter_coordenadas("Insira as coordenadas do Ponto P2: ")
+        P3 = obter_coordenadas("Insira as coordenadas do Ponto P3: ")
         
-        R0_PONTO = P1 # R0 é um ponto sobre o plano (escolhemos P1)
+        R0_PONTO = P1
         N_NORMAL = calcular_normal(P1, P2, P3)
         
         if np.linalg.norm(N_NORMAL) < 1e-9:
             print("ERRO: Os pontos P1, P2 e P3 são colineares ou coincidentes. Insira novos pontos que definam um plano.")
-            N_NORMAL = None # Garante que o loop continue
+            N_NORMAL = None 
         else:
             print("Plano de Projeção definido com sucesso.")
     
-    # 2. Obter C e checar se está no plano
+    # Obtem C e checa se está no plano
     C_PV = None
     d_check = 0 
     
     while C_PV is None or np.abs(d_check) < 1e-9:
         print("\n[Passo 2/2: Definir Ponto de Vista (PV)]")
-        C_PV = obter_coordenadas("Insira as coordenadas do Ponto de Vista C")
+        print("\n[Coordenadas de Ponto de Vista de Exemplo Pronto]")
+        print("[02 02 10]\n")
+        C_PV = obter_coordenadas("Insira as coordenadas do Ponto de Vista C: ")
         
         # Recalcula d0, d1, d com o novo C_PV e o N_NORMAL já validado
         d0, d1, d_check = calcular_parametros_perspectiva(C_PV, N_NORMAL, R0_PONTO)
         
-        # O Ponto de Vista C NÃO pode estar no plano (d = 0), pois causaria divisão por zero.
+        # O Ponto de Vista C NÃO pode estar no plano (d = 0), pois causaria divisão por zero
         if np.abs(d_check) < 1e-9:
             print(
                 "ERRO CRÍTICO: O Ponto de Vista C está no Plano de Projeção! "
                 "A projeção não é possível. Insira um novo PV."
             )
-            C_PV = None # Garante que o loop continue
+            C_PV = None 
         else:
             print("Ponto de Vista validado.")
 
     return C_PV, P1, P2, P3, R0_PONTO, N_NORMAL
 
-# --- 3. Funções Matemáticas (Projeção) ---
+# --- Funções Matemáticas (Projeção) ---
 
 def calcular_parametros_perspectiva(C: np.ndarray, N: np.ndarray, R0: np.ndarray) -> tuple[float, float, float]:
-    """
-    Calcula d0, d1 e d.
+    '''
+    Calcula d0, d1 e d
     d0 = R0 . N (distância do plano à origem)
     d1 = C . N (distância do PV à origem, na direção N)
     d = d0 - d1 (distância do PV ao plano, na direção N)
 
-    Args:
-        C: Ponto de Vista (np.ndarray).
-        N: Vetor normal normalizado do plano (np.ndarray).
-        R0: Um ponto no plano de projeção (np.ndarray).
+    Entrada:
+        C: Ponto de Vista
+        N: Vetor normal normalizado do plano
+        R0: Um ponto no plano de projeção
 
-    Returns:
-        Tupla de (d0, d1, d).
-    """
+    Saída:
+        Tupla de (d0, d1, d)
+    '''
     d0 = np.dot(R0, N)
     d1 = np.dot(C, N)
     d = d0 - d1
     return d0, d1, d
 
 def criar_matriz_perspectiva(C: np.ndarray, N: np.ndarray, d: float, d0: float, d1: float) -> np.ndarray:
-    """
-    Cria a matriz de Projeção Perspectiva Mper (4x4).
+    '''
+    Cria a matriz de Projeção Perspectiva Mper (4x4)
 
-    Args:
-        C: Ponto de Vista (a, b, c).
-        N: Vetor normal normalizado do plano (Nx, Ny, Nz).
-        d: d0 - d1.
-        d0: R0 . N.
-        d1: C . N.
+    Entrada:
+        C: Ponto de Vista (a, b, c)
+        N: Vetor normal normalizado do plano (Nx, Ny, Nz)
+        d: d0 - d1
+        d0: R0 . N
+        d1: C . N
 
-    Returns:
-        A matriz de projeção 4x4 (np.ndarray).
-    """
+    Saída:
+        A matriz de projeção 4x4 
+    '''
     a, b, c = C
     Nx, Ny, Nz = N
     
@@ -186,28 +190,28 @@ def criar_matriz_perspectiva(C: np.ndarray, N: np.ndarray, d: float, d0: float, 
     return Mper
 
 def projetar_para_cartesianas(Mper: np.ndarray, Mobjeto_homogenea: np.ndarray) -> np.ndarray:
-    """
+    '''
     Aplica a projeção (Mper) e converte para coordenadas cartesianas 2D (XC, YC)
     dividindo por W' (a quarta coordenada homogênea).
 
-    Args:
+    Entrada:
         Mper: Matriz de Projeção Perspectiva 4x4.
         Mobjeto_homogenea: Matriz dos vértices do objeto (4xN), em coordenadas homogêneas.
 
-    Returns:
+    Saída:
         Matriz (2xN) com as coordenadas cartesianas projetadas [XC, YC].
-    """
+    '''
     Mob_projetado_homogenea = Mper @ Mobjeto_homogenea
 
     X_prime = Mob_projetado_homogenea[0, :]
     Y_prime = Mob_projetado_homogenea[1, :]
     W_prime = Mob_projetado_homogenea[3, :]
 
-    # Tratamento de W' ≈ 0 para evitar divisão por zero (RuntimeWarning).
-    # Se W' é zero, o ponto foi projetado para o infinito. 
-    # Substituímos W' por um valor pequeno e diferente de zero, 
+    # Tratamento de W' ≈ 0 para evitar divisão por zero
+    # Se W' é zero, o ponto foi projetado para o infinito 
+    # W' é substituido por um valor pequeno e diferente de zero, 
     # o que resultará em coordenadas muito grandes, que serão ignoradas/clipadas 
-    # na fase de desenho ou transformação Window-Viewport.
+    # na fase de desenho ou transformação Janela-Viewport
     W_prime_zero = np.abs(W_prime) < 1e-9
     W_prime[W_prime_zero] = np.where(W_prime[W_prime_zero] >= 0, 1e-9, -1e-9)
 
@@ -216,21 +220,21 @@ def projetar_para_cartesianas(Mper: np.ndarray, Mobjeto_homogenea: np.ndarray) -
     
     return np.vstack([XC, YC])
 
-# --- 4. Função Janela-Viewport ---
+# --- Transformação Janela-Viewport ---
 
 def transformar_janela_viewport(Mobj_WCS_Projetado: np.ndarray, viewport_min: np.ndarray, viewport_max: np.ndarray) -> np.ndarray:
-    """
-    Cria a matriz Tjv com centralização, preservando o Aspect Ratio, e a aplica,
-    transformando coordenadas de Projeção (WCS) para Dispositivo (DCS).
+    '''
+    Cria a matriz Tjv com centralização, preservando o Aspect Ratio,
+    transformando coordenadas de Projeção (WCS) para Dispositivo (PDCS)
 
-    Args:
-        Mobj_WCS_Projetado: Matriz (2xN) com as coordenadas projetadas (XC, YC).
-        viewport_min: Coordenadas mínimas do Viewport [U_min, V_min].
-        viewport_max: Coordenadas máximas do Viewport [U_max, V_max].
+    Entrada:
+        Mobj_WCS_Projetado: Matriz (2xN) com as coordenadas projetadas (XC, YC)
+        viewport_min: Coordenadas mínimas do Viewport [U_min, V_min]
+        viewport_max: Coordenadas máximas do Viewport [U_max, V_max]
 
-    Returns:
-        Matriz (2xN) com as coordenadas de tela (DCS).
-    """
+    Saída:
+        Matriz (2xN) com as coordenadas de tela (PDCS).
+    '''
     U_min, V_min = viewport_min
     U_max, V_max = viewport_max
     
@@ -244,12 +248,12 @@ def transformar_janela_viewport(Mobj_WCS_Projetado: np.ndarray, viewport_min: np
     Y_range = Y_max - Y_min
 
     # Calcula fatores de escala base (S_x_base, S_y_base)
-    # Evita ZeroDivisionError e trata o caso de objeto colapsado/invisível
+    # Evita erro de divisão por zero e trata o caso de objeto colapsado/invisível
     S_x_base = (U_max - U_min) / X_range if np.abs(X_range) > 1e-9 else 0.0
     S_y_base = (V_max - V_min) / Y_range if np.abs(Y_range) > 1e-9 else 0.0
 
     if S_x_base == 0.0 and S_y_base == 0.0:
-        # Se as duas bases são zero, o objeto é um ponto ou não é visível; retorna zeros.
+        # Se as duas bases são zero, o objeto é um ponto ou não é visível; retorna zeros
         return np.zeros((2, Mobj_WCS_Projetado.shape[1]))
 
     # Escolhe o menor fator de escala para preservar o Aspect Ratio
@@ -258,23 +262,23 @@ def transformar_janela_viewport(Mobj_WCS_Projetado: np.ndarray, viewport_min: np
     Sx_final = S_new
     Sy_final = S_new
 
-    # Cálculo do padding para centralização
+    # Cálculo do espaçamento para centralização
     U_new_range = S_new * X_range
     V_new_range = S_new * Y_range
     
-    U_padding = (U_max - U_new_range) / 2
-    V_padding = (V_max - V_new_range) / 2
+    U_espacamento = (U_max - U_new_range) / 2
+    V_espacamento = (V_max - V_new_range) / 2
     
     # Fatores de Deslocamento (T_x, T_y)
-    # T_x: U_min + Padding - (Escala * X_min)
-    # T_y: V_min + Padding + (Escala * Y_max) -- Sy negativo para inverter o eixo Y
-    T_x = U_min + U_padding - Sx_final * X_min
-    T_y = V_min + V_padding + Sy_final * Y_max 
+    # T_x: U_min + Espaçamento - (Escala * X_min)
+    # T_y: V_min + Espaçamento + (Escala * Y_max)
+    T_x = U_min + U_espacamento - Sx_final * X_min
+    T_y = V_min + V_espacamento + Sy_final * Y_max 
 
     # Montagem da matriz Tjv (3x3)
     Tjv = np.array([
         [Sx_final, 0, T_x],
-        [0, -Sy_final, T_y], # Sy negativo para inverter o eixo Y (Pygame/Tela)
+        [0, -Sy_final, T_y], 
         [0, 0, 1]
     ])
     
@@ -284,27 +288,27 @@ def transformar_janela_viewport(Mobj_WCS_Projetado: np.ndarray, viewport_min: np
     # Retorna apenas as coordenadas x e y de tela
     return Mobj_DCS[:2, :]
 
-# --- 5. Pipeline Principal e Visualização Pygame ---
+# --- Pipeline Principal e Visualização Pygame ---
 
 def pipeline_completo(C_PV: np.ndarray, N_NORMAL: np.ndarray, R0_PONTO: np.ndarray, Mobjeto_homogenea: np.ndarray, viewport_min: np.ndarray, viewport_max: np.ndarray) -> np.ndarray:
-    """
+    '''
     Executa o pipeline completo de Projeção Perspectiva: 
     Cálculo de parâmetros -> Matriz de Projeção -> Projeção Cartesiana -> Transformação Viewport.
 
     Retorna None se a projeção não for possível (C no plano).
 
-    Args:
+    Entrada:
         C_PV: Ponto de Vista.
         N_NORMAL: Vetor normal do plano.
         R0_PONTO: Ponto no plano.
         Mobjeto_homogenea: Vértices do objeto em coordenadas homogêneas.
         viewport_min, viewport_max: Limites do viewport.
 
-    Returns:
-        Matriz (2xN) com as coordenadas de tela (DCS) ou None.
-    """
+    Saida:
+        Matriz (2xN) com as coordenadas de tela (PDCS) ou None.
+    '''
     
-    # 1. Cálculo dos Parâmetros Perspectivos (d0, d1, d)
+    # Cálculo dos Parâmetros Perspectivos (d0, d1, d)
     d0, d1, d = calcular_parametros_perspectiva(C_PV, N_NORMAL, R0_PONTO)
 
     # Verificação de erro, embora já tratada na obtenção dos dados, para robustez
@@ -312,18 +316,19 @@ def pipeline_completo(C_PV: np.ndarray, N_NORMAL: np.ndarray, R0_PONTO: np.ndarr
         print("Erro: O Ponto de Vista C está no Plano de Projeção. Projeção impossível.")
         return None
 
-    # 2. Criação e aplicação da Matriz Perspectiva
+    # Criação e aplicação da Matriz Perspectiva
     Mper = criar_matriz_perspectiva(C_PV, N_NORMAL, d, d0, d1)
     Mobj_WCS_Projetado = projetar_para_cartesianas(Mper, Mobjeto_homogenea)
 
-    # 3. Transformação Janela-Viewport
+    # Transformação Janela-Viewport
     Mobj_DCS = transformar_janela_viewport(Mobj_WCS_Projetado, viewport_min, viewport_max)
     
     return Mobj_DCS
 
 def desenhar_objeto_pygame(screen: pygame.Surface, Mobj_DCS: np.ndarray, arestas: list[tuple[int, int]], color: tuple[int, int, int] = (255, 255, 255)):
-    """Desenha as arestas e vértices do objeto na tela Pygame."""
-    
+    '''
+    Desenha as arestas e vértices do objeto na tela Pygame.
+    '''
     coords_pixels = Mobj_DCS.astype(int).T 
     
     for p1_idx, p2_idx in arestas:
@@ -331,7 +336,7 @@ def desenhar_objeto_pygame(screen: pygame.Surface, Mobj_DCS: np.ndarray, arestas
         p2 = coords_pixels[p2_idx]
         
         # O bloco try/except é mantido, pois a transformação Viewport não garante que
-        # os pontos caibam em um inteiro ou no buffer da tela (apesar do clipping
+        # os pontos caibam em um inteiro ou no buffer da tela (apesar do recorte
         # do Pygame), especialmente se pontos no infinito causarem coordenadas extremas.
         try:
             pygame.draw.line(screen, color, p1, p2, 2)
@@ -350,10 +355,10 @@ if __name__ == '__main__':
     # Executa os doctests para as funções matemáticas
     doctest.testmod(verbose=False) 
 
-    # 1. Coleta os dados do cenário com validação
+    # Coleta os dados do cenário
     C_PV, P1, P2, P3, R0_PONTO, N_NORMAL = obter_dados_do_cenario()
 
-    # 2. Executa o pipeline para obter as coordenadas de tela
+    # Executa o pipeline para obter as coordenadas de tela
     DCS_COORD = pipeline_completo(
         C_PV, N_NORMAL, R0_PONTO, VERTICES_HOMOGENEAS, VIEWPORT_MIN, VIEWPORT_MAX
     )
@@ -362,7 +367,7 @@ if __name__ == '__main__':
         print("Não foi possível gerar as coordenadas de tela. Encerrando.")
         sys.exit(1) 
 
-    # 3. Inicializa Pygame e Visualização
+    # Inicializa Pygame e Visualização
     pygame.init()
     screen = pygame.display.set_mode((VIEWPORT_WIDTH, VIEWPORT_HEIGHT))
     pygame.display.set_caption("Projeção Perspectiva Cônica")
