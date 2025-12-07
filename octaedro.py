@@ -3,6 +3,10 @@ import pygame
 import sys
 import doctest
 
+# --- Alunos ---
+# Eduardo Angelo Rozada Minholi - RA 134932
+# Nuno Miguel Mendonça Abilio - RA 132830
+
 # --- Definições Iniciais do Objeto e Viewport ---
 
 # Objeto: Octaedro (6 Vértices)
