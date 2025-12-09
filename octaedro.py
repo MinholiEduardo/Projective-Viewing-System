@@ -19,7 +19,6 @@ VERTICES_CARTESIANAS = np.array([
     [ 0,  0, -1]   # Ponta -Z
 ]).T
 
-# Adiciona a coordenada homogênea '1' (w=1)
 VERTICES_HOMOGENEAS = np.vstack([
     VERTICES_CARTESIANAS,
     np.ones(VERTICES_CARTESIANAS.shape[1])
@@ -183,7 +182,6 @@ def criar_matriz_perspectiva(C: np.ndarray, N: np.ndarray, d: float, d0: float, 
     a, b, c = C
     Nx, Ny, Nz = N
     
-    # Matriz Mper conforme a fórmula da Projeção Perspectiva
     Mper = np.array([
         [d + a*Nx, a*Ny, a*Nz, -a*d0],
         [b*Nx, d + b*Ny, b*Nz, -b*d0],
@@ -252,7 +250,6 @@ def transformar_janela_viewport(Mobj_WCS_Projetado: np.ndarray, viewport_min: np
     Y_range = Y_max - Y_min
 
     # Calcula fatores de escala base (S_x_base, S_y_base)
-    # Evita erro de divisão por zero e trata o caso de objeto colapsado/invisível
     S_x_base = (U_max - U_min) / X_range if np.abs(X_range) > 1e-9 else 0.0
     S_y_base = (V_max - V_min) / Y_range if np.abs(Y_range) > 1e-9 else 0.0
 
@@ -289,7 +286,6 @@ def transformar_janela_viewport(Mobj_WCS_Projetado: np.ndarray, viewport_min: np
     Mobj_homogenea_2D = np.vstack([Mobj_WCS_Projetado, np.ones(Mobj_WCS_Projetado.shape[1])])
     Mobj_DCS = Tjv @ Mobj_homogenea_2D
 
-    # Retorna apenas as coordenadas x e y de tela
     return Mobj_DCS[:2, :]
 
 # --- Pipeline Principal e Visualização Pygame ---
@@ -315,7 +311,7 @@ def pipeline_completo(C_PV: np.ndarray, N_NORMAL: np.ndarray, R0_PONTO: np.ndarr
     # Cálculo dos Parâmetros Perspectivos (d0, d1, d)
     d0, d1, d = calcular_parametros_perspectiva(C_PV, N_NORMAL, R0_PONTO)
 
-    # Verificação de erro, embora já tratada na obtenção dos dados, para robustez
+    # Verificação de erro
     if np.abs(d) < 1e-9:
         print("Erro: O Ponto de Vista C está no Plano de Projeção. Projeção impossível.")
         return None
@@ -339,9 +335,6 @@ def desenhar_objeto_pygame(screen: pygame.Surface, Mobj_DCS: np.ndarray, arestas
         p1 = coords_pixels[p1_idx]
         p2 = coords_pixels[p2_idx]
         
-        # O bloco try/except é mantido, pois a transformação Viewport não garante que
-        # os pontos caibam em um inteiro ou no buffer da tela (apesar do recorte
-        # do Pygame), especialmente se pontos no infinito causarem coordenadas extremas.
         try:
             pygame.draw.line(screen, color, p1, p2, 2)
         except ValueError: 
